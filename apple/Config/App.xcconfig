@@ -1,0 +1,2 @@
+// The server the app enrols against (ops passes DOMAIN). Profiles carry the host after enrolment.
+NOMAX_HOST = example.com

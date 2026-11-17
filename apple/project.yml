@@ -1,0 +1,204 @@
+name: NoMax
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+configFiles:
+  Debug: Config/App.xcconfig
+  Release: Config/App.xcconfig
+settings:
+  base:
+    DEVELOPMENT_TEAM: YOUR_TEAM_ID
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+schemes:
+  NoMax:
+    build:
+      targets:
+        NoMax: all
+    test:
+      targets: [NoMaxUITests]
+  NoMaxMac:
+    build:
+      targets:
+        NoMaxMac: all
+targets:
+  NoMax:
+    type: application
+    platform: iOS
+    sources:
+      # The other platform's Info.plist would be copied in as a resource.
+      - path: App
+        excludes: [InfoMac.plist]
+      - Shared
+    dependencies:
+      - target: NoMaxTunnel
+      - framework: Frameworks/NomaxCheck.xcframework
+        embed: false
+      - sdk: libresolv.tbd
+    entitlements:
+      path: App/NoMax.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.developer.networking.vpn.api: [allow-vpn]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.example.nomax"]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: NoMax
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NomaxHost: $(NOMAX_HOST)
+        KeychainGroup: $(AppIdentifierPrefix)com.example.nomax
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UIUserInterfaceStyle: Dark
+        # SplashView redraws this screen and dissolves the logo; keep SplashMark
+        # at its natural size and centered. iOS caches launch screens across
+        # reinstalls, so a change may need a restart to show.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: SplashMark
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CFBundleURLTypes:
+          - CFBundleURLName: com.example.nomax
+            CFBundleURLSchemes: [nomax]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.nomax
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        OTHER_LDFLAGS: ["-ObjC"]
+  NoMaxUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: NoMax
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.nomax.uitests
+        GENERATE_INFOPLIST_FILE: YES
+  NoMaxTunnel:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Tunnel
+        excludes: [InfoMac.plist]
+      - Shared
+    dependencies:
+      - framework: Frameworks/NomaxCore.xcframework
+        embed: false
+      - sdk: NetworkExtension.framework
+      - sdk: libresolv.tbd
+    entitlements:
+      path: Tunnel/NoMaxTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.example.nomax"]
+    info:
+      path: Tunnel/Info.plist
+      properties:
+        CFBundleDisplayName: NoMaxTunnel
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        KeychainGroup: $(AppIdentifierPrefix)com.example.nomax
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.nomax.tunnel
+        TARGETED_DEVICE_FAMILY: "1,2"
+        OTHER_LDFLAGS: ["-ObjC"]
+  NoMaxMac:
+    type: application
+    platform: macOS
+    sources:
+      # App Store Connect rejects a Mac app with a raw Info.plist among its resources.
+      - path: App
+        excludes: [Info.plist]
+      - Shared
+    dependencies:
+      - target: NoMaxMacTunnel
+      - framework: Frameworks/NomaxCheck.xcframework
+        embed: false
+      - sdk: libresolv.tbd
+    entitlements:
+      path: App/NoMaxMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        com.apple.developer.networking.vpn.api: [allow-vpn]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.example.nomax"]
+    info:
+      path: App/InfoMac.plist
+      properties:
+        CFBundleDisplayName: NoMax
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NomaxHost: $(NOMAX_HOST)
+        KeychainGroup: $(AppIdentifierPrefix)com.example.nomax
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.utilities
+        CFBundleURLTypes:
+          - CFBundleURLName: com.example.nomax
+            CFBundleURLSchemes: [nomax]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.nomax
+        PRODUCT_NAME: NoMax
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        OTHER_LDFLAGS: ["-ObjC"]
+  NoMaxMacTunnel:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Tunnel
+        excludes: [Info.plist]
+      - Shared
+    dependencies:
+      - framework: Frameworks/NomaxCore.xcframework
+        embed: false
+      - sdk: NetworkExtension.framework
+      - sdk: libresolv.tbd
+    entitlements:
+      path: Tunnel/NoMaxMacTunnel.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+        com.apple.developer.networking.networkextension: [packet-tunnel-provider]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.example.nomax"]
+    info:
+      path: Tunnel/InfoMac.plist
+      properties:
+        CFBundleDisplayName: NoMaxTunnel
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        KeychainGroup: $(AppIdentifierPrefix)com.example.nomax
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.nomax.tunnel
+        PRODUCT_NAME: NoMaxTunnel
+        OTHER_LDFLAGS: ["-ObjC"]
+        ENABLE_HARDENED_RUNTIME: YES

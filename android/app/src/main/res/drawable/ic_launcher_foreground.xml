@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The silver mark, as on the iOS icon, centred in the adaptive icon's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M40.752,72.36 A2.952,2.952 0 0,1 37.8,69.408 L37.8,51.84 A16.2,16.2 0 0,1 54,35.64 L54,35.64 A16.2,16.2 0 0,1 70.2,51.84 L70.2,54.374 A2.952,2.952 0 0,1 67.248,57.326 L67.248,57.326 A2.952,2.952 0 0,1 64.296,54.374 L64.296,51.84 A10.296,10.296 0 0,0 54,41.544 L54,41.544 A10.296,10.296 0 0,0 43.704,51.84 L43.704,69.408 A2.952,2.952 0 0,1 40.752,72.36 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="35.640" android:endX="0" android:endY="72.360"
+                android:startColor="#FFF4F5F7" android:endColor="#FFA2A7AF" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M67.248,59.486 A2.952,2.952 0 0,1 70.2,62.438 L70.2,69.408 A2.952,2.952 0 0,1 67.248,72.36 L67.248,72.36 A2.952,2.952 0 0,1 64.296,69.408 L64.296,62.438 A2.952,2.952 0 0,1 67.248,59.486 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="35.640" android:endX="0" android:endY="72.360"
+                android:startColor="#FFF4F5F7" android:endColor="#FFA2A7AF" />
+        </aapt:attr>
+    </path>
+</vector>

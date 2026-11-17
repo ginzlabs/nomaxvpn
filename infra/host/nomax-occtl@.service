@@ -1,0 +1,8 @@
+[Unit]
+Description=occtl for nomax
+
+[Service]
+ExecStart=/usr/local/libexec/nomax-occtl
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal

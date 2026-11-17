@@ -1,0 +1,12 @@
+[Unit]
+Description=occtl for nomax
+
+[Socket]
+ListenStream=/run/nomax-occtl.sock
+SocketUser=root
+SocketGroup=nomax
+SocketMode=0660
+Accept=yes
+
+[Install]
+WantedBy=sockets.target

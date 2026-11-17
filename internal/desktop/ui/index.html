@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoMax</title>
+<style>
+  :root {
+    --bg: #000; --text: #fff; --secondary: #8e8e93; --blue: #0a84ff; --green: #30d158; --red: #ff453a;
+    --fill: rgba(255, 255, 255, .08); --edge: rgba(255, 255, 255, .12); --menu: #1c1c1e;
+    --curve: .35s cubic-bezier(.4, 0, .2, 1);
+    --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font: 15px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; user-select: none; -webkit-user-select: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  button:disabled { cursor: default; }
+  button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  svg { display: block; fill: currentColor; }
+  .secondary { color: var(--secondary); }
+  .glass { background: var(--fill); border: 1px solid var(--edge); border-radius: 22px; }
+
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; transition: opacity var(--curve), transform var(--curve); }
+  .screen.off { opacity: 0; pointer-events: none; transform: translateX(-6%); }
+  .screen.off.ahead { transform: translateX(6%); }
+  .version { flex: none; text-align: center; color: var(--secondary); opacity: .6; font-size: 11.5px; padding: 0 0 12px; user-select: text; }
+
+  .bar { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 56px; padding: 0 8px; }
+  .bar h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  .bar .left, .bar .right { display: flex; gap: 2px; }
+  .bar .right { justify-content: flex-end; }
+  .icon { width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; color: var(--text); transition: background var(--curve), opacity var(--curve); }
+  .icon:hover:not(:disabled) { background: var(--fill); }
+  .icon:disabled { opacity: .3; }
+  .icon svg { width: 22px; height: 22px; }
+
+  .big { display: block; width: 100%; height: 52px; border-radius: 26px; background: var(--blue); color: #fff; font-weight: 600; transition: opacity var(--curve), filter var(--curve); }
+  .big:hover:not(:disabled) { filter: brightness(1.1); }
+  .big:disabled { opacity: .35; }
+  .link { color: var(--blue); font-size: 13px; padding: 8px 12px; border-radius: 14px; }
+  .link:hover { background: var(--fill); }
+  .foot { flex: none; padding: 12px 24px 18px; }
+  .foot .row { display: flex; gap: 10px; }
+  .big.alt { background: var(--fill); border: 1px solid var(--edge); color: var(--text); }
+  .sendnote { color: var(--secondary); font-size: 12.5px; text-align: center; min-height: 17px; margin-bottom: 8px; transition: opacity var(--curve); }
+
+  .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Join */
+  #join .body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
+  .mark { height: 72px; margin-top: 64px; }
+  #join h2 { margin: 28px 0 0; font-size: 22px; font-weight: 600; }
+  .pin { display: flex; gap: 8px; align-items: center; margin-top: 24px; }
+  .pin.shake { animation: shake .4s linear; }
+  @keyframes shake { 20% { transform: translateX(8px); } 40% { transform: translateX(-8px); } 60% { transform: translateX(8px); } 80% { transform: translateX(-8px); } }
+  .pin .sep { width: 12px; height: 3px; border-radius: 2px; background: var(--secondary); }
+  .pin .box { width: 42px; height: 54px; border-radius: 14px; background: var(--fill); border: 1px solid var(--edge); display: grid; place-items: center;
+    font-size: 26px; font-weight: 600; transition: background var(--curve), border-color var(--curve); }
+  .pin .box.active { background: rgba(10, 132, 255, .18); border-color: rgba(10, 132, 255, .6); }
+  .error { color: var(--red); font-size: 13px; text-align: center; min-height: 36px; margin-top: 14px; transition: opacity var(--curve); max-width: 340px; }
+  #join .big { max-width: 380px; margin-top: 10px; position: relative; }
+  #join .big .spinner { position: absolute; left: calc(50% - 10px); top: 16px; width: 20px; height: 20px; }
+  #join .link { margin-top: 10px; }
+
+  /* Home */
+  #home .body { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
+  .grow { flex: 1; }
+  .power { width: 180px; height: 180px; border-radius: 50%; background: var(--fill); border: 1px solid var(--edge); display: grid; place-items: center;
+    transition: background var(--curve), border-color var(--curve), box-shadow var(--curve), transform .15s; }
+  .power:active { transform: scale(.97); }
+  .power svg { width: 72px; height: 72px; }
+  .power.on { background: var(--green); border-color: transparent; box-shadow: 0 0 36px rgba(48, 209, 88, .55); }
+  .power.connecting svg { animation: pulse .7s ease-in-out infinite alternate; }
+  @keyframes pulse { to { opacity: .45; } }
+  .status { margin-top: 24px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+  .status .label { font-size: 24px; font-weight: 700; }
+  .status .faded { transition: opacity var(--curve); }
+  .status .time { font-family: var(--mono); }
+  .status .traffic { display: flex; gap: 24px; justify-content: center; margin-top: 4px; }
+  #home .error { margin-top: 8px; }
+  .slot { position: relative; width: 100%; max-width: 340px; height: 140px; margin-top: 8px; }
+  .panel { overflow: hidden; transition: opacity var(--curve); }
+  .ip { display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; width: 100%; text-align: left; transition: opacity var(--curve); border-radius: 22px 22px 0 0; }
+  .ip:hover:not(:disabled) { background: rgba(255, 255, 255, .03); }
+  .ip .row { display: flex; align-items: center; gap: 12px; min-height: 28px; }
+  .ip .key { width: 30px; text-align: center; font-weight: 700; font-size: 17px; color: var(--secondary); display: grid; place-items: center; }
+  .ip .key svg { width: 20px; height: 20px; }
+  .ip .addr { font: 600 21px var(--mono); white-space: nowrap; }
+  .ip .place { font-weight: 600; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ip .wait { color: transparent; background: rgba(142, 142, 147, .22); border-radius: 6px; }
+  .ip.dim { opacity: .55; }
+  .fold { overflow: hidden; max-height: 108px; transition: max-height var(--curve), opacity var(--curve); }
+  .fold.shut { max-height: 0; opacity: 0; }
+  .divider { height: 1px; background: var(--edge); margin: 0 18px; }
+  .setting { display: flex; align-items: center; width: 100%; height: 52px; padding: 0 18px; text-align: left; }
+  .setting:hover:not(:disabled) { background: rgba(255, 255, 255, .03); }
+  .setting span:first-child { flex: 1; }
+  .setting .value { color: var(--blue); display: flex; align-items: center; gap: 2px; }
+  .setting svg { width: 18px; height: 18px; }
+
+  .run { position: absolute; left: 0; right: 0; top: 0; max-height: 300px; display: flex; flex-direction: column; gap: 6px; padding: 14px 18px;
+    background: #111113; transition: opacity var(--curve), transform var(--curve); }
+  .run.off { opacity: 0; transform: scale(.96); pointer-events: none; }
+  .run .head { display: flex; align-items: center; }
+  .run .head b { flex: 1; font-size: 17px; font-weight: 600; }
+  .run .headline { font-size: 13px; min-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .run .rows { overflow-y: auto; scrollbar-width: none; min-height: 0; flex: 0 1 auto; }
+  .run .actions { display: flex; align-items: center; padding-top: 4px; }
+  .run .actions .big { width: auto; height: 40px; padding: 0 18px; border-radius: 20px; }
+  .run .actions .grow + button { color: var(--blue); padding: 8px 12px; border-radius: 14px; }
+  .step { display: flex; align-items: center; gap: 10px; padding: 5px 0; transition: opacity var(--curve); }
+  .step.pending { opacity: .45; }
+  .step .markbox { width: 22px; height: 22px; display: grid; place-items: center; flex: none; }
+  .step .text { flex: 1; min-width: 0; }
+  .step .title { font-weight: 600; font-size: 14px; }
+  .step .detail { font-size: 12.5px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 17px; }
+  .ring { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--secondary); }
+  .dot { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #000; font-size: 11px; font-weight: 700; }
+  .dot.ok { background: var(--green); } .dot.fail { background: var(--red); } .dot.info { background: var(--secondary); }
+  .markbox .spinner { color: var(--blue); }
+
+  /* Logs and check */
+  .list { flex: 1; overflow-y: auto; padding-bottom: 8px; user-select: text; -webkit-user-select: text; }
+  .list::-webkit-scrollbar { width: 8px; } .list::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
+  .group { color: var(--secondary); font-size: 12px; font-weight: 600; padding: 18px 20px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .line { display: flex; padding: 2px 20px; font: 12px/16px var(--mono); }
+  .line .t { color: var(--secondary); flex: none; }
+  .line .m { padding: 0 8px; flex: none; color: var(--secondary); }
+  .line .m.ok { color: var(--green); } .line .m.fail { color: var(--red); }
+  .line .s { overflow-wrap: anywhere; }
+  .empty { flex: 1; display: grid; place-items: center; text-align: center; padding: 32px; color: var(--secondary); }
+  .verdict { margin: 8px 16px; padding: 14px 18px; font-size: 16px; display: flex; align-items: center; gap: 12px; }
+  .verdict .spinner { color: var(--blue); flex: none; width: 18px; height: 18px; }
+  .note { padding: 4px 20px; color: var(--secondary); font-size: 12.5px; }
+  #check .step { padding: 6px 20px; }
+  #check .step .detail { white-space: normal; user-select: text; -webkit-user-select: text; }
+
+  /* Menus, dialogs, toasts */
+  .menu { position: fixed; z-index: 10; min-width: 200px; max-height: 70vh; overflow-y: auto; padding: 6px; background: var(--menu); border: 1px solid var(--edge); border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6); transition: opacity .15s, transform .15s; transform-origin: top; }
+  .menu.off { opacity: 0; transform: scale(.96); pointer-events: none; }
+  .menu button, .menu .info { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: 9px; text-align: left; }
+  .menu button:hover:not(:disabled) { background: var(--fill); }
+  .menu button:disabled { opacity: .35; }
+  .menu .info { color: var(--secondary); font-size: 13px; }
+  .menu .tick { width: 16px; color: var(--blue); }
+  .shade { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .55); display: grid; place-items: center; transition: opacity var(--curve); }
+  .shade.off { opacity: 0; pointer-events: none; }
+  .dialog { width: min(320px, 86vw); background: var(--menu); border: 1px solid var(--edge); border-radius: 22px; padding: 22px 22px 12px; }
+  .dialog h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+  .dialog p { margin: 0; color: var(--secondary); }
+  .dialog .buttons { display: flex; justify-content: flex-end; gap: 4px; margin-top: 16px; }
+  .dialog .buttons button { color: var(--blue); padding: 8px 14px; border-radius: 14px; font-weight: 600; }
+  .dialog .buttons button:hover { background: var(--fill); }
+  .dialog .buttons .danger { color: var(--red); }
+  .toast { position: fixed; left: 50%; bottom: 84px; z-index: 30; transform: translateX(-50%); background: var(--menu); border: 1px solid var(--edge); border-radius: 18px;
+    padding: 8px 16px; font-size: 13px; transition: opacity var(--curve); pointer-events: none; max-width: 90vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast.off { opacity: 0; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="522.24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F4F5F7"/><stop offset="1" stop-color="#A2A7AF"/></linearGradient>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M13,3h-2v10h2L13,3zM17.83,5.17l-1.42,1.42C17.99,7.86 19,9.81 19,12c0,3.87 -3.13,7 -7,7s-7,-3.13 -7,-7c0,-2.19 1.01,-4.14 2.58,-5.42L6.17,5.17C4.23,6.82 3,9.26 3,12c0,4.97 4.03,9 9,9s9,-4.03 9,-9c0,-2.74 -1.23,-5.18 -3.17,-6.83z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,16c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/></symbol>
+    <symbol id="i-logs" viewBox="0 0 24 24"><path d="M19,5v14H5V5h14m1.1,-2H3.9c-0.5,0 -0.9,0.4 -0.9,0.9v16.2c0,0.4 0.4,0.9 0.9,0.9h16.2c0.4,0 0.9,-0.5 0.9,-0.9V3.9c0,-0.5 -0.5,-0.9 -0.9,-0.9zM11,7h6v2h-6V7zM11,11h6v2h-6v-2zM11,15h6v2h-6zM7,7h2v2H7zM7,11h2v2H7zM7,15h2v2H7z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M15.9,5c-0.17,0 -0.32,0.09 -0.41,0.23l-0.07,0.15 -5.18,11.65c-0.16,0.29 -0.26,0.61 -0.26,0.96 0,1.11 0.9,2.01 2.01,2.01 0.96,0 1.77,-0.68 1.96,-1.59l0.01,-0.03L16.4,5.5c0,-0.28 -0.22,-0.5 -0.5,-0.5zM1,9l2,2c2.88,-2.88 6.79,-4.08 10.53,-3.62l1.19,-2.68C9.89,3.84 4.74,5.27 1,9zM21,11l2,-2c-1.64,-1.64 -3.55,-2.82 -5.59,-3.57l-0.53,2.82c1.5,0.62 2.9,1.53 4.12,2.75zM17,15l2,-2c-0.8,-0.8 -1.7,-1.42 -2.66,-1.89l-0.55,2.92c0.42,0.27 0.83,0.59 1.21,0.97zM5,13l2,2c1.13,-1.13 2.56,-1.79 4.03,-2l1.28,-2.88c-2.63,-0.08 -5.3,0.87 -7.31,2.88z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z"/></symbol>
+    <symbol id="i-unfold" viewBox="0 0 24 24"><path d="M12,5.83L15.17,9l1.41,-1.41L12,3 7.41,7.59 8.83,9 12,5.83zM12,18.17L8.83,15l-1.41,1.41L12,21l4.59,-4.59L15.17,15 12,18.17z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><path d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1L8,12v-2h2c0.55,0 1,-0.45 1,-1L11,7h2c1.1,0 2,-0.9 2,-2v-0.41c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M16,1H4C2.9,1 2,1.9 2,3v14h2V3h12V1zM19,5H8C6.9,5 6,5.9 6,7v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2V7C21,5.9 20.1,5 19,5zM19,21H8V7h11V21z"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M19,9h-4V3H9v6H5l7,7 7,-7zM5,18v2h14v-2H5z"/></symbol>
+  </defs>
+</svg>
+
+<section id="join" class="screen off">
+  <div class="body">
+    <svg class="mark" viewBox="0 0 460.8 522.24" style="width:63.5px"><path fill="url(#silver)" d="M41.98,522.24 A41.98,41.98 0 0,1 0,480.26 L0,230.4 A230.4,230.4 0 0,1 230.4,0 L230.4,0 A230.4,230.4 0 0,1 460.8,230.4 L460.8,266.44 A41.98,41.98 0 0,1 418.82,308.43 L418.82,308.43 A41.98,41.98 0 0,1 376.83,266.44 L376.83,230.4 A146.43,146.43 0 0,0 230.4,83.97 L230.4,83.97 A146.43,146.43 0 0,0 83.97,230.4 L83.97,480.26 A41.98,41.98 0 0,1 41.98,522.24 Z"/><path fill="url(#silver)" d="M418.82,339.15 A41.98,41.98 0 0,1 460.8,381.13 L460.8,480.26 A41.98,41.98 0 0,1 418.82,522.24 L418.82,522.24 A41.98,41.98 0 0,1 376.83,480.26 L376.83,381.13 A41.98,41.98 0 0,1 418.82,339.15 Z"/></svg>
+    <h2>Enter PIN</h2>
+    <div class="pin" id="pin" role="textbox" aria-label="PIN"></div>
+    <div class="error" id="join-error"></div>
+    <button class="big" id="join-go" disabled><span id="join-label">Join</span><div class="spinner" id="join-spin" hidden></div></button>
+    <button class="link" id="join-check">Check connection</button>
+    <button class="link" id="join-route" hidden></button>
+  </div>
+  <div class="version" data-version></div>
+</section>
+
+<section id="home" class="screen off">
+  <div class="bar">
+    <div class="left"><button class="icon" id="more" aria-label="More"><svg><use href="#i-more"/></svg></button></div>
+    <h1>NoMax</h1>
+    <div class="right">
+      <button class="icon" id="home-check" aria-label="Check connection" title="Check connection"><svg><use href="#i-check"/></svg></button>
+      <button class="icon" id="home-logs" aria-label="Logs" title="Logs"><svg><use href="#i-logs"/></svg></button>
+    </div>
+  </div>
+  <div class="body">
+    <div class="grow"></div>
+    <button class="power" id="power" aria-label="Connect"><svg><use href="#i-power"/></svg></button>
+    <div class="status">
+      <div class="label" id="status">Not connected</div>
+      <div class="secondary faded" id="via">&nbsp;</div>
+      <div class="secondary faded time" id="elapsed">0:00:00</div>
+      <div class="secondary faded traffic" id="traffic"><span id="rx"></span><span id="tx"></span></div>
+    </div>
+    <div class="error" id="home-error"></div>
+    <div class="slot">
+      <div class="panel glass" id="panel">
+        <button class="ip" id="ip">
+          <div class="row"><span class="key">IP</span><span class="addr" id="ip-addr"></span></div>
+          <div class="row"><span class="key"><svg><use href="#i-globe"/></svg></span><span class="place" id="ip-place"></span></div>
+        </button>
+        <div class="fold" id="fold">
+          <div class="divider"></div>
+          <button class="setting" id="protocol"><span>Protocol</span><span class="value"><span id="protocol-name">Auto</span><svg><use href="#i-unfold"/></svg></span></button>
+          <div id="route-row">
+            <div class="divider"></div>
+            <button class="setting" id="route"><span>Route</span><span class="value"><span id="route-name">Auto</span><svg><use href="#i-unfold"/></svg></span></button>
+          </div>
+        </div>
+      </div>
+      <div class="run glass off" id="run">
+        <div class="head"><b id="run-title">Auto</b><span class="secondary" id="run-progress"></span></div>
+        <div class="headline secondary" id="run-headline"></div>
+        <div class="rows" id="run-rows"></div>
+        <div class="actions" id="run-actions" hidden>
+          <button class="big" id="run-copy">Copy log</button><div class="grow"></div><button id="run-close">Close</button>
+        </div>
+      </div>
+    </div>
+    <div class="grow"></div>
+  </div>
+  <div class="version" data-version></div>
+</section>
+
+<section id="logs" class="screen off ahead">
+  <div class="bar">
+    <div class="left"><button class="icon" id="logs-back" aria-label="Back"><svg><use href="#i-back"/></svg></button></div>
+    <h1>Logs</h1>
+    <div class="right">
+      <button class="icon" id="logs-copy" aria-label="Copy" title="Copy"><svg><use href="#i-copy"/></svg></button>
+      <button class="icon" id="logs-more" aria-label="More"><svg><use href="#i-more"/></svg></button>
+    </div>
+  </div>
+  <div class="list" id="logs-list"></div>
+  <div class="empty" id="logs-empty">Nothing yet. Every connection's steps show up here, so you can share them if a protocol doesn't work.</div>
+  <div class="foot">
+    <div class="sendnote" data-send></div>
+    <div class="row"><button class="big alt" id="logs-send" data-send-button>Send to NoMax</button><button class="big" id="logs-test">Test every protocol</button></div>
+  </div>
+</section>
+
+<section id="check" class="screen off ahead">
+  <div class="bar">
+    <div class="left"><button class="icon" id="check-back" aria-label="Back"><svg><use href="#i-back"/></svg></button></div>
+    <h1>Connection check</h1>
+    <div class="right">
+      <button class="icon" id="check-copy" aria-label="Copy report" title="Copy report"><svg><use href="#i-copy"/></svg></button>
+      <button class="icon" id="check-save" aria-label="Save report" title="Save report"><svg><use href="#i-save"/></svg></button>
+    </div>
+  </div>
+  <div class="list">
+    <div class="verdict glass" id="verdict"></div>
+    <div class="note">Sending shares this report and your log with us: your network's address and provider, and what reached our server. No keys or passwords.</div>
+    <div id="check-steps"></div>
+  </div>
+  <div class="foot">
+    <div class="sendnote" data-send></div>
+    <div class="row"><button class="big alt" id="check-send" data-send-button disabled>Send to NoMax</button><button class="big" id="check-again" disabled>Check again</button></div>
+  </div>
+</section>
+
+<div class="menu off" id="menu"></div>
+<div class="shade off" id="shade">
+  <div class="dialog">
+    <h3 id="dialog-title"></h3>
+    <p id="dialog-text"></p>
+    <div class="buttons"><button id="dialog-cancel">Cancel</button><button id="dialog-alt" hidden></button><button class="danger" id="dialog-ok"></button></div>
+  </div>
+</div>
+<div class="toast off" id="toast"></div>
+
+<script>
+"use strict";
+const PIN_LENGTH = 6;
+const $ = id => document.getElementById(id);
+
+// The window binds window.nomax; the preview serves the same calls over HTTP.
+function call(method, arg = null) {
+  if (window.nomax) return window.nomax(method, arg);
+  return fetch("/call/" + method, { method: "POST", body: JSON.stringify(arg) }).then(async r => {
+    const t = await r.text();
+    if (!r.ok) throw new Error(t);
+    return t ? JSON.parse(t) : null;
+  });
+}
+
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
+const show = (e, on) => { e.style.opacity = on ? 1 : 0; e.setAttribute("aria-hidden", !on); };
+
+let state = null, screen = "", pin = "", pinError = "";
+
+function go(name) {
+  if (name === screen) return;
+  const order = ["join", "home", "logs", "check"];
+  for (const s of order) {
+    const off = s !== name;
+    $(s).inert = off;
+    $(s).classList.toggle("off", off);
+    $(s).classList.toggle("ahead", off && order.indexOf(s) > order.indexOf(name));
+  }
+  const from = screen;
+  screen = name;
+  closeMenu();
+  if (name === "logs") refreshLogs();
+  if (from === "check") call("checkCancel");
+}
+
+let toastTimer;
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.classList.remove("off");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add("off"), 2200);
+}
+
+async function copy(text) {
+  try { await call("copy", text); toast("Copied"); } catch (e) { toast(String(e.message || e)); }
+}
+
+async function save(name, text) {
+  try { const path = await call("save", { Name: name, Text: text }); toast("Saved to " + path); } catch (e) { toast(String(e.message || e)); }
+}
+
+// Menus and dialogs
+
+function openMenu(anchor, items) {
+  const m = $("menu");
+  m.replaceChildren();
+  for (const it of items) {
+    if (it.info) { m.append(el("div", "info", it.info)); continue; }
+    const b = el("button");
+    if ("ticked" in it) { const t = el("span", "tick", it.ticked ? "✓" : ""); b.append(t); }
+    b.append(document.createTextNode(it.label));
+    b.disabled = !!it.disabled;
+    b.onclick = () => { closeMenu(); it.run(); };
+    m.append(b);
+  }
+  const r = anchor.getBoundingClientRect();
+  m.style.visibility = "hidden";
+  m.inert = false;
+  m.classList.remove("off");
+  const w = m.offsetWidth, h = m.offsetHeight;
+  let left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8);
+  if (r.right < innerWidth / 2) left = Math.max(8, r.left);
+  let top = r.bottom + 4;
+  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 4);
+  m.style.left = left + "px";
+  m.style.top = top + "px";
+  m.style.visibility = "";
+  m.querySelector("button:not(:disabled)")?.focus();
+}
+function closeMenu() { $("menu").classList.add("off"); $("menu").inert = true; }
+document.addEventListener("pointerdown", e => { if (!$("menu").contains(e.target)) closeMenu(); }, true);
+
+let dialogOK = null, dialogAlt = null;
+// alt is an optional {label, run} between Cancel and ok.
+function confirmDialog(title, text, ok, run, alt) {
+  $("dialog-title").textContent = title;
+  $("dialog-text").textContent = text;
+  $("dialog-text").hidden = !text;
+  $("dialog-ok").textContent = ok;
+  $("dialog-alt").textContent = alt?.label ?? "";
+  $("dialog-alt").hidden = !alt;
+  dialogOK = run;
+  dialogAlt = alt?.run;
+  $("shade").inert = false;
+  $("shade").classList.remove("off");
+  $("dialog-cancel").focus();
+}
+function closeDialog() { $("shade").classList.add("off"); $("shade").inert = true; dialogOK = dialogAlt = null; }
+$("dialog-cancel").onclick = closeDialog;
+$("dialog-ok").onclick = () => { const run = dialogOK; closeDialog(); run?.(); };
+$("dialog-alt").onclick = () => { const run = dialogAlt; closeDialog(); run?.(); };
+
+// The window asks this when it's closed while the VPN is on (windows/main.go).
+function askClose() {
+  confirmDialog("Close NoMax?", "Closing NoMax disconnects the VPN. Minimize it to keep the VPN on.",
+    "Close", () => call("close"), { label: "Minimize", run: () => call("minimize") });
+}
+$("shade").onclick = e => { if (e.target === $("shade")) closeDialog(); };
+
+// Join
+
+function renderPin(busy) {
+  const p = $("pin");
+  if (p.children.length === 0) {
+    for (let i = 0; i < PIN_LENGTH; i++) {
+      if (i === PIN_LENGTH / 2) p.append(el("div", "sep"));
+      p.append(el("div", "box"));
+    }
+  }
+  const boxes = p.querySelectorAll(".box");
+  boxes.forEach((b, i) => {
+    b.textContent = pin[i] || "";
+    b.classList.toggle("active", !busy && i === pin.length);
+  });
+  $("join-go").disabled = pin.length !== PIN_LENGTH || busy;
+}
+
+function join() {
+  if (pin.length !== PIN_LENGTH || state?.joining) return;
+  call("join", pin);
+}
+
+function typePin(text) {
+  if (state?.joining) return;
+  const digits = text.replace(/\D/g, "");
+  if (!digits) return;
+  pin = (pin + digits).slice(0, PIN_LENGTH);
+  if (state?.error) call("dismissError");
+  renderPin(false);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if (!$("shade").classList.contains("off")) return closeDialog();
+    if (!$("menu").classList.contains("off")) return closeMenu();
+    if (screen === "logs") return go("home");
+    if (screen === "check") return go(state?.joined ? "home" : "join");
+  }
+  if (screen !== "join" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^\d$/.test(e.key)) { typePin(e.key); e.preventDefault(); }
+  else if (e.key === "Backspace") { pin = pin.slice(0, -1); renderPin(false); e.preventDefault(); }
+  else if (e.key === "Enter") { join(); e.preventDefault(); }
+});
+document.addEventListener("paste", e => { if (screen === "join") typePin(e.clipboardData.getData("text")); });
+$("join-go").onclick = join;
+$("join-check").onclick = openCheck;
+$("join-route").onclick = () => routeMenu($("join-route"));
+
+// Home
+
+const regions = new Intl.DisplayNames(["en"], { type: "region" });
+function place(ip) {
+  let country = ip.country;
+  try { if (/^[A-Z]{2}$/.test(country) && country !== "XX" && country !== "T1") country = regions.of(country); } catch {}
+  return [country, ip.colo].filter(Boolean).join(" · ");
+}
+
+function bytes(n) {
+  if (n < 1000) return n + " B";
+  const units = ["kB", "MB", "GB", "TB"];
+  let i = -1;
+  do { n /= 1000; i++; } while (n >= 1000 && i < units.length - 1);
+  return (n < 10 ? n.toFixed(1) : Math.round(n)) + " " + units[i];
+}
+
+function elapsed(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+const titleOf = id => ({ auto: "Auto", test: "Test" })[id] || state?.protocols.find(p => p.id === id)?.title || id;
+
+function renderHome(s) {
+  const on = s.tunnel !== "off", connected = s.tunnel === "on";
+  const power = $("power");
+  power.classList.toggle("on", on);
+  power.classList.toggle("connecting", s.tunnel === "connecting");
+  power.setAttribute("aria-label", on ? "Disconnect" : "Connect");
+  $("status").textContent = connected ? "Connected" : s.tunnel === "connecting" ? "Connecting…" : "Not connected";
+  $("via").textContent = connected && s.active ? "via " + titleOf(s.active) : "\u00a0";
+  show($("via"), connected);
+  show($("elapsed"), connected);
+  show($("traffic"), connected);
+  if (connected) {
+    $("elapsed").textContent = elapsed(Date.now() - s.since);
+    $("rx").textContent = "↓ " + bytes(s.rx);
+    $("tx").textContent = "↑ " + bytes(s.tx);
+  }
+  if (s.error) $("home-error").textContent = s.error;
+  show($("home-error"), !!s.error);
+  $("home-check").disabled = on;
+
+  const r = s.run;
+  const failed = r && r.finished && !r.winner;
+  const runShown = !!r && r.kind !== "single" && (failed || (!r.finished && s.tunnel === "connecting"));
+  $("run").classList.toggle("off", !runShown);
+  $("run").style.maxHeight = Math.max(140, Math.min(300, innerHeight - $("run").parentElement.getBoundingClientRect().top - 12)) + "px";
+  show($("panel"), !runShown);
+  if (r) renderRun(r, failed);
+
+  const ip = $("ip");
+  ip.disabled = s.checkingIP || runShown;
+  ip.classList.toggle("dim", s.checkingIP && !!s.ip);
+  const addr = $("ip-addr"), where = $("ip-place");
+  addr.className = "addr"; where.className = "place";
+  if (s.ip) { addr.textContent = s.ip.ip; where.textContent = place(s.ip); }
+  else if (s.checkingIP) { addr.textContent = "000.000.000.000"; where.textContent = "United Kingdom · LHR"; addr.classList.add("wait"); where.classList.add("wait"); }
+  else { addr.textContent = "Unavailable"; addr.classList.add("secondary"); where.textContent = "Click to check again"; where.classList.add("secondary"); }
+
+  $("fold").classList.toggle("shut", on);
+  $("protocol").disabled = on || runShown;
+  $("protocol-name").textContent = titleOf(s.choice);
+  $("route-row").hidden = s.routes.length < 3;
+  $("route").disabled = on || runShown;
+  $("route-name").textContent = routeTitle(s);
+}
+
+const routeTitle = s => s.routes.find(r => r.id === s.route)?.title || "Auto";
+const routeMenu = anchor => openMenu(anchor, state.routes.map(r => ({ label: r.title, ticked: r.id === state.route, run: () => call("chooseRoute", r.id).then(poll) })));
+
+let shownRows = "";
+function renderRun(r, failed) {
+  $("run-title").textContent = r.kind === "test" ? "Testing every protocol" : "Auto";
+  const tried = r.rows.filter(x => x.state !== "pending").length;
+  const p = $("run-progress");
+  p.textContent = failed ? "None worked" : r.finished ? "Done" : `${tried} of ${r.rows.length}`;
+  p.style.color = failed ? "var(--red)" : "";
+  $("run-headline").textContent = r.headline || "";
+  $("run-actions").hidden = !failed;
+  const key = JSON.stringify(r.rows);
+  if (key === shownRows) return;
+  shownRows = key;
+  const rows = $("run-rows");
+  rows.replaceChildren(...r.rows.map(row => stepRow(row.title, row.step, row.state)));
+  const active = [...rows.children].findLastIndex(c => c.dataset.state === "trying");
+  if (active >= 0) rows.scrollTo({ top: rows.children[Math.max(0, active - 1)].offsetTop - rows.offsetTop, behavior: "smooth" });
+}
+
+function stepRow(title, detail, st) {
+  const row = el("div", "step" + (st === "pending" || st === "" ? " pending" : ""));
+  row.dataset.state = st;
+  const box = el("div", "markbox");
+  if (st === "trying" || st === "running") box.append(el("div", "spinner"));
+  else if (st === "ok") box.append(el("div", "dot ok", "✓"));
+  else if (st === "fail") box.append(el("div", "dot fail", "✕"));
+  else if (st === "info") box.append(el("div", "dot info", "i"));
+  else box.append(el("div", "ring"));
+  const text = el("div", "text");
+  text.append(el("div", "title", title), el("div", "detail", detail || "\u00a0"));
+  row.append(box, text);
+  return row;
+}
+
+$("power").onclick = () => call(state?.tunnel !== "off" ? "disconnect" : "connect").then(poll);
+$("ip").onclick = () => call("checkIP").then(poll);
+$("protocol").onclick = () => openMenu($("protocol"), state.protocols.map(p => ({ label: p.title, ticked: p.id === state.choice, run: () => call("choose", p.id).then(poll) })));
+$("route").onclick = () => routeMenu($("route"));
+$("more").onclick = () => openMenu($("more"), [
+  { info: state.host },
+  { label: "Remove this device", run: () => confirmDialog("Remove this device?", "You'll need a new PIN to join again.", "Remove", () => call("leave")) },
+]);
+$("home-logs").onclick = () => go("logs");
+$("home-check").onclick = openCheck;
+$("run-copy").onclick = async () => copy(await call("logText"));
+$("run-close").onclick = () => call("closeRun").then(poll);
+
+// Logs
+
+async function refreshLogs() {
+  const sections = await call("logs") || [];
+  const list = $("logs-list");
+  const atTop = list.scrollTop < 4;
+  const nodes = [];
+  const day = t => new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  for (const s of sections) {
+    nodes.push(el("div", "group", `${day(s.start)} · ${s.title}`));
+    for (const l of s.lines) {
+      const line = el("div", "line");
+      const step = el("span", "s");
+      if (l.proto) { step.append(el("b", "", titleOf(l.proto) + ": ")); }
+      step.append(document.createTextNode(l.step));
+      line.append(el("span", "t", new Date(l.t).toLocaleTimeString("en-GB")), el("span", "m " + l.state, mark(l.state)), step);
+      nodes.push(line);
+    }
+  }
+  list.replaceChildren(...nodes);
+  if (atTop) list.scrollTop = 0;
+  list.hidden = sections.length === 0;
+  $("logs-empty").hidden = sections.length !== 0;
+  $("logs-copy").disabled = sections.length === 0;
+  $("logs-list").dataset.count = sections.length;
+}
+const mark = st => ({ ok: "✓", fail: "✗", trying: "…", start: "▶", done: "■" })[st] || "·";
+
+$("logs-back").onclick = () => go("home");
+$("logs-copy").onclick = async () => copy(await call("logText"));
+$("logs-more").onclick = () => {
+  const empty = $("logs-list").dataset.count === "0";
+  openMenu($("logs-more"), [
+    { label: "Save to Downloads", disabled: empty, run: async () => save("NoMax log", await call("logText")) },
+    { label: "Clear", disabled: empty, run: () => confirmDialog("Clear the log?", "", "Clear", () => call("clearLog").then(refreshLogs)) },
+  ]);
+};
+$("logs-test").onclick = () => { go("home"); call("test").then(poll); };
+
+// Send: the log and checks go to the server; the outcome shows for a minute,
+// and while something still waits to go.
+let checkDone = false;
+function renderSend(s) {
+  const st = s.send || {};
+  const text = st.sending ? "Sending…" : Date.now() - st.at < 60000 ? st.message
+    : st.pending ? "Waiting to send. It goes by itself once you're connected." : "";
+  document.querySelectorAll("[data-send]").forEach(n => { n.textContent = text; });
+  $("logs-send").disabled = st.sending || !s.joined;
+  $("check-send").disabled = st.sending || !s.joined || !checkDone;
+}
+$("logs-send").onclick = $("check-send").onclick = () => call("send").then(poll);
+
+// Connection check
+
+let checkTimer;
+function openCheck() {
+  go("check");
+  $("check-steps").replaceChildren();
+  renderCheck({ done: false, steps: [] });
+  call("checkStart").then(pollCheck);
+}
+
+async function pollCheck() {
+  clearTimeout(checkTimer);
+  if (screen !== "check") return;
+  const r = await call("checkState");
+  renderCheck(r || { done: false, steps: [] });
+  if (!r?.done) checkTimer = setTimeout(pollCheck, 300);
+}
+
+function renderCheck(r) {
+  const v = $("verdict");
+  v.replaceChildren();
+  if (r.done) v.append(document.createTextNode(r.verdict || ""));
+  else v.append(el("div", "spinner"), document.createTextNode("Checking how this network treats our server…"));
+  const groups = new Map();
+  for (const s of r.steps || []) {
+    if (!groups.has(s.group)) groups.set(s.group, []);
+    groups.get(s.group).push(s);
+  }
+  const nodes = [];
+  for (const [g, steps] of groups) {
+    nodes.push(el("div", "group", g));
+    for (const s of steps) nodes.push(stepRow(s.title, s.detail, s.state));
+  }
+  $("check-steps").replaceChildren(...nodes);
+  checkDone = !!r.done;
+  $("check-again").disabled = !r.done;
+  $("check-copy").disabled = !r.done;
+  $("check-save").disabled = !r.done;
+}
+
+$("check-back").onclick = () => go(state?.joined ? "home" : "join");
+$("check-again").onclick = openCheck;
+$("check-copy").onclick = async () => copy(await call("checkText"));
+$("check-save").onclick = async () => save("NoMax connection check", await call("checkText"));
+
+// State
+
+let lastError = "", logsTick = 0;
+async function poll() {
+  let s;
+  try { s = await call("state"); } catch { return; }
+  state = s;
+  if (screen === "" || ((screen === "join") !== !s.joined && screen !== "check")) {
+    if (!s.joined) { pin = ""; }
+    go(s.joined ? (screen === "logs" ? "logs" : "home") : "join");
+  }
+  if (!s.joined) {
+    renderPin(s.joining);
+    $("join-label").style.opacity = s.joining ? 0 : 1;
+    $("join-spin").hidden = !s.joining;
+    if (s.error) $("join-error").textContent = s.error;
+    show($("join-error"), !!s.error);
+    $("join-route").hidden = s.routes.length < 3;
+    $("join-route").textContent = "Route: " + routeTitle(s);
+    $("join-route").disabled = s.joining;
+    if (s.error && s.error !== lastError) {
+      const p = $("pin");
+      p.classList.remove("shake");
+      void p.offsetWidth;
+      p.classList.add("shake");
+    }
+  } else {
+    renderHome(s);
+  }
+  lastError = s.error;
+  renderSend(s);
+  document.querySelectorAll("[data-version]").forEach(n => { n.textContent = s.version ? "Version " + s.version : ""; });
+  if (screen === "logs" && ++logsTick % 4 === 0) refreshLogs();
+  $("logs-test").disabled = !!s.run && s.run.kind === "test" && !s.run.finished;
+}
+
+$("menu").inert = $("shade").inert = true;
+poll();
+setInterval(poll, 250);
+</script>
+</body>
+</html>

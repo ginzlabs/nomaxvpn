@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Before Android 12, the window background is the launch screen: black with the silver mark. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/black" />
+    <item android:drawable="@drawable/mark_silver" android:gravity="center" android:width="88dp" android:height="100dp" />
+</layer-list>

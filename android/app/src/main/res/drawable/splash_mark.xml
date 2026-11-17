@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch screen mark: 100 dp tall in the 288 dp splash icon area. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="288dp" android:height="288dp"
+    android:viewportWidth="288" android:viewportHeight="288">
+    <path android:pathData="M107.921,194 A8.038,8.038 0 0,1 99.882,185.962 L99.882,138.118 A44.118,44.118 0 0,1 144,94 L144,94 A44.118,44.118 0 0,1 188.118,138.118 L188.118,145.019 A8.038,8.038 0 0,1 180.079,153.059 L180.079,153.059 A8.038,8.038 0 0,1 172.039,145.019 L172.039,138.118 A28.039,28.039 0 0,0 144,110.079 L144,110.079 A28.039,28.039 0 0,0 115.961,138.118 L115.961,185.962 A8.038,8.038 0 0,1 107.921,194 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="94.000" android:endX="0" android:endY="194.000"
+                android:startColor="#FFF4F5F7" android:endColor="#FFA2A7AF" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M180.079,158.941 A8.038,8.038 0 0,1 188.118,166.98 L188.118,185.962 A8.038,8.038 0 0,1 180.079,194 L180.079,194 A8.038,8.038 0 0,1 172.039,185.962 L172.039,166.98 A8.038,8.038 0 0,1 180.079,158.941 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="94.000" android:endX="0" android:endY="194.000"
+                android:startColor="#FFF4F5F7" android:endColor="#FFA2A7AF" />
+        </aapt:attr>
+    </path>
+</vector>

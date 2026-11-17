@@ -1,0 +1,13 @@
+#!/bin/sh
+# One request per connection from nomax (nomax-occtl.socket): "users",
+# "reload", or "disconnect d<id>". occtl only answers root.
+read -r cmd arg
+case "$cmd" in
+users) exec occtl -j show users ;;
+reload) occtl reload >/dev/null && echo ok ;;
+disconnect)
+	expr "$arg" : 'd[0-9][0-9]*$' >/dev/null || exit 1
+	occtl disconnect user "$arg" >/dev/null 2>&1
+	echo ok # also when the user wasn't connected
+	;;
+esac

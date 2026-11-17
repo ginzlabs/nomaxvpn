@@ -1,0 +1,144 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{.}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+<main>
+{{end}}
+
+{{define "foot"}}
+</main>
+</body>
+</html>
+{{end}}
+
+{{define "privacy"}}{{template "head" "Privacy · NoMax"}}
+<h1>NoMax privacy</h1>
+<p>NoMax is private: only people the admin invites can use it. It is not a commercial service.</p>
+<h2>What the server stores</h2>
+<ul>
+<li>The name the admin gave you, and a short-lived PIN while an invite is open.</li>
+<li>For each device: its name, a WireGuard public key, random credentials, when it last connected and how many bytes it moved in total.</li>
+</ul>
+<h2>What it does not store</h2>
+<ul>
+<li>No websites, domains, DNS queries or connection logs.</li>
+<li>No email, phone number, location, contacts or analytics.</li>
+</ul>
+<p>In the NoMax app, your device's private key is created on the device and never leaves it. When you join from the web page, the server creates the key, shows it to you once and does not keep it. Removing a device or a person deletes their records immediately.</p>
+<p>To show which address websites see, the app asks Cloudflare's public trace page at 1.1.1.1 when it connects or disconnects, or when you tap the address. Cloudflare sees what any website would. On Android, while connected, the NoMax server asks on the app's behalf, since all your traffic leaves from there anyway.</p>
+{{template "foot"}}{{end}}
+
+{{define "login"}}{{template "head" "Sign in"}}
+<form method="post" action="{{.Admin}}/login" class="card narrow">
+<label>Admin code<input type="password" name="code" autocomplete="current-password" autofocus required></label>
+{{with .Error}}<p class="err">{{.}}</p>{{end}}
+<button>Sign in</button>
+</form>
+{{template "foot"}}{{end}}
+
+{{define "dashboard"}}{{template "head" "NoMax admin"}}
+<header>
+<h1>NoMax</h1>
+<form method="post" action="{{.Admin}}/logout"><button class="link">Sign out</button></form>
+</header>
+<p class="muted">{{.Cfg.Host}} · {{len .People}} people · {{.Devices}} devices · Hysteria2 {{if .Hysteria}}on{{else}}waiting for certificate{{end}} · up {{.Uptime}} · {{.Cfg.Version}}</p>
+{{with .Flash}}<p class="err">{{.}}</p>{{end}}
+{{if .Paused}}<form method="post" action="{{.Admin}}/resume" class="card row spread">
+<p class="err">Joining is paused after many wrong PINs. It resumes by itself within 15 minutes.</p>
+<button>Resume now</button>
+</form>{{end}}
+
+<form method="post" action="{{.Admin}}/people" class="card row">
+<input name="name" placeholder="Name" required maxlength="64">
+<label class="inline">Devices <input type="number" name="max" value="3" min="1" max="20"></label>
+<button>Add person</button>
+</form>
+
+{{range .People}}
+<section class="card{{if .Disabled}} off{{end}}">
+<div class="row spread">
+<h2><a href="{{$.Admin}}/people/{{.ID}}">{{.Name}}</a>{{if .Disabled}} <small>(disabled)</small>{{end}}</h2>
+{{if .PIN}}<span><span class="mono">{{pin .PIN}}</span> <small class="muted">{{left .PINExpires}}</small></span>{{end}}
+</div>
+{{if .Devices}}
+<table>
+<tr><th>Device</th><th>Seen</th><th>WireGuard</th><th>Traffic</th><th></th></tr>
+{{range .Devices}}
+<tr>
+<td>{{.Name}}<br><small class="mono">{{.IPv4}}</small></td>
+<td>{{ago .LastSeen}}</td>
+<td>{{ago .LastHandshake}}</td>
+<td>↑{{bytes .BytesUp}} ↓{{bytes .BytesDown}}</td>
+<td><form method="post" action="{{$.Admin}}/devices/{{.ID}}/delete"><button class="link danger">Remove</button></form></td>
+</tr>
+{{end}}
+</table>
+{{else}}<p class="muted">No devices yet ({{.MaxDevices}} allowed).</p>{{end}}
+<div class="row">
+<a class="button" href="{{$.Admin}}/people/{{.ID}}">Invite</a>
+{{if .Disabled}}
+<form method="post" action="{{$.Admin}}/people/{{.ID}}/enable"><button>Enable</button></form>
+{{else}}
+<form method="post" action="{{$.Admin}}/people/{{.ID}}/disable"><button>Disable</button></form>
+{{end}}
+<form method="post" action="{{$.Admin}}/people/{{.ID}}/delete"><button class="danger">Delete</button></form>
+</div>
+</section>
+{{end}}
+{{template "foot"}}{{end}}
+
+{{define "invite"}}{{template "head" "Invite"}}
+<p><a href="{{.Admin}}">← Back</a></p>
+<h1>Invite {{.Person.Name}}</h1>
+<div class="card">
+{{if .Person.PIN}}
+<p class="big mono">{{pin .Person.PIN}}</p>
+<p class="muted">{{left .Person.PINExpires}}{{if not .Person.PINExpires.IsZero}} · works once{{end}}</p>
+<textarea readonly rows="7">Here's how to set up NoMax:
+1. iPhone or Mac: install TestFlight, then open {{or .Cfg.TestFlightURL "(TestFlight link)"}}
+{{with .FilesURL}}   Android or Windows: open {{.}}
+{{end}}2. Install NoMax, open it and enter PIN {{pin .Person.PIN}}
+Or tap this on your iPhone: {{.Link}}</textarea>
+{{with .QR}}<p><img src="{{.}}" alt="QR code with the join link" width="240" height="240"></p>
+<p class="muted">Scan with the iPhone camera once NoMax is installed.</p>{{end}}
+{{else}}
+<p>1. iPhone or Mac: install TestFlight, then open {{or .Cfg.TestFlightURL "(TestFlight link)"}}{{with .FilesURL}}<br>Android, Windows or another app: {{.}}{{end}}<br>2. Install NoMax. When it asks for a PIN, make one here.</p>
+{{end}}
+<form method="post" action="{{.Admin}}/people/{{.Person.ID}}/pin"><button>New PIN</button></form>
+<p class="muted">Each PIN adds one device and lasts 10 minutes. Existing devices keep working.</p>
+</div>
+{{template "foot"}}{{end}}
+
+{{define "join"}}{{template "head" .Label}}
+<h1>{{.Label}}</h1>
+<p class="row">{{if .APK}}<a class="button" href="{{.Files}}/{{.APKName}}">Android</a>{{end}}
+{{if .EXE}}<a class="button" href="{{.Files}}/{{.EXEName}}">Windows</a>{{end}}
+{{with .Cfg.TestFlightURL}}<a class="button" href="{{.}}">iPhone and Mac</a>{{end}}</p>
+<form method="post" action="{{.Files}}" class="card">
+<label>PIN<input name="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123-456" required></label>
+<label>Device name<input name="name" maxlength="64" required></label>
+{{with .Error}}<p class="err">{{.}}</p>{{end}}
+<button>Get settings</button>
+</form>
+{{template "foot"}}{{end}}
+
+{{define "configs"}}{{template "head" "Your settings"}}
+<h1>{{.Device.Name}} is ready</h1>
+<p class="err">This page is shown once. Save or scan what you need now. To see it again you'll need a new PIN.</p>
+<p class="muted">Pick one. WireGuard is simplest; if it gets blocked, try AmneziaWG, then Reality.</p>
+{{range .Exports}}{{$e := .}}
+<section class="card">
+<h2>{{.Title}}</h2>
+<p class="muted">{{.Hint}}</p>
+{{with .QR}}<p><img src="{{.}}" alt="QR code for {{$e.Title}}" class="qr"></p>{{end}}
+{{with .Text}}<textarea readonly rows="5">{{.}}</textarea>{{end}}
+{{with .Data}}<p><a class="button" href="{{.}}" download="{{$e.File}}">Download {{$e.File}}</a></p>{{end}}
+</section>
+{{end}}
+{{template "foot"}}{{end}}

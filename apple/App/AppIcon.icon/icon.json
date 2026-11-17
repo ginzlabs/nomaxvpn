@@ -1,0 +1,62 @@
+{
+  "fill": {
+    "solid": "srgb:0.00000,0.00000,0.00000,1.00000"
+  },
+  "groups": [
+    {
+      "name": "Lock",
+      "layers": [
+        {
+          "name": "2-lock",
+          "image-name": "2-lock.svg",
+          "glass": true,
+          "fill": {
+            "linear-gradient": [
+              "srgb:0.95686,0.96078,0.96863,1.00000",
+              "srgb:0.63529,0.65490,0.68627,1.00000"
+            ]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "name": "Arch",
+      "layers": [
+        {
+          "name": "1-arch",
+          "image-name": "1-arch.svg",
+          "glass": true,
+          "fill": {
+            "linear-gradient": [
+              "srgb:0.95686,0.96078,0.96863,1.00000",
+              "srgb:0.63529,0.65490,0.68627,1.00000"
+            ]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

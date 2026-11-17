@@ -1,0 +1,48 @@
+name: android
+
+on:
+  push:
+    branches: [main]
+    paths: [android/**, core/**, internal/apiclient/**, internal/check/**, internal/directory/**, internal/profile/**, internal/xray/**, cmd/ops/android.go, go.mod, go.sum, .github/workflows/android.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    if: vars.SERVER_HOST != '' # set by `make gh-secrets`; a repo without a server only runs ci
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the build number is the commit count
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Secrets
+        env:
+          NOMAX_ENV: ${{ secrets.NOMAX_ENV }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$NOMAX_ENV" > _cert/nomax.env
+          grep -E '^(ADMIN_CODE|ADMIN_PATH|API_PATH|FILES_PATH|PRIVACY_PATH|REVIEW_CODE|REALITY_PRIVATE_KEY|WG_PRIVATE_KEY|DIST_P12_PASSWORD|ANDROID_KEYSTORE_PASSWORD|MAC_INSTALLER_P12_PASSWORD)=.' _cert/nomax.env | cut -d= -f2- | sed 's/^/::add-mask::/'
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > _cert/android.p12
+          printf '%s\n' "$SSH_KEY" > _cert/ssh_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > _cert/known_hosts
+      - run: make android-release ANDROID_ARGS=-upload
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}

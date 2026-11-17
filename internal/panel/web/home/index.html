@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>TITLE</title>
+<style>
+:root { --bg: #f6f7f9; --fg: #14161a; --muted: #6b7280; --a: #4f46e5; --b: #06b6d4; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0d0f13; --fg: #eef0f3; --muted: #8b93a1; --a: #818cf8; --b: #22d3ee; } }
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body { display: grid; place-items: center; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+main { text-align: center; padding: 2rem; }
+.mark { width: 56px; height: 56px; margin: 0 auto 1.5rem; border-radius: 16px; background: linear-gradient(135deg, var(--a), var(--b)); }
+h1 { font-size: clamp(2rem, 6vw, 3.25rem); font-weight: 700; letter-spacing: -0.02em; }
+p { margin-top: .75rem; color: var(--muted); font-size: 1.125rem; }
+footer { position: fixed; bottom: 1.5rem; left: 0; right: 0; text-align: center; color: var(--muted); font-size: .875rem; }
+</style>
+</head>
+<body>
+<main>
+<div class="mark"></div>
+<h1></h1>
+<p>Something new is on its way.</p>
+</main>
+<footer></footer>
+<script>
+const name = document.title;
+document.querySelector("h1").textContent = name;
+document.querySelector("footer").textContent = "\u00a9 " + new Date().getFullYear() + " " + name;
+</script>
+</body>
+</html>

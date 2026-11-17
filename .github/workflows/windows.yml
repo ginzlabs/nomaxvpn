@@ -1,0 +1,84 @@
+name: windows
+
+on:
+  push:
+    branches: [main]
+    paths: [windows/**, core/**, internal/anytls/**, internal/bridge/**, internal/bridged/**, internal/apiclient/**, internal/check/**, internal/directory/**, internal/desktop/**, internal/l3/**, internal/mieru/**, internal/profile/**, internal/tlsutil/**, internal/trusttunnel/**, internal/xray/**, third_party/veepin/**, cmd/ops/windows.go, go.mod, go.sum, .github/workflows/windows.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows
+  cancel-in-progress: true
+
+jobs:
+  # On a real Windows machine: the tests, then every protocol through the Wintun adapter against the live server.
+  test:
+    if: vars.SERVER_HOST != '' # set by `make gh-secrets`; a repo without a server only runs ci
+    runs-on: windows-latest
+    environment: production
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go vet ./core/ ./windows/... ./internal/desktop/
+      - run: go test ./core/ ./internal/desktop/
+      - name: Secrets
+        env:
+          NOMAX_ENV: ${{ secrets.NOMAX_ENV }}
+        run: |
+          umask 077
+          printf '%s\n' "$NOMAX_ENV" > _cert/nomax.env
+          grep -E '^(ADMIN_CODE|ADMIN_PATH|API_PATH|FILES_PATH|PRIVACY_PATH|REVIEW_CODE|REALITY_PRIVATE_KEY|WG_PRIVATE_KEY|DIST_P12_PASSWORD|ANDROID_KEYSTORE_PASSWORD|MAC_INSTALLER_P12_PASSWORD)=.' _cert/nomax.env | cut -d= -f2- | sed 's/^/::add-mask::/'
+      - name: Disconnecting while WireGuard waits
+        run: |
+          go run ./cmd/ops windows -wintun
+          go test -c -ldflags "-X github.com/ginzlabs/nomaxvpn/internal/profile.APIPath=$(grep ^API_PATH= _cert/nomax.env | cut -d= -f2-)" -o dist/windows/core.test.exe ./core
+          NOMAX_WINTUN=1 dist/windows/core.test.exe -test.run TestWindowsDisconnectWhileWaiting -test.v -test.timeout 10m
+      - name: Every protocol through Wintun
+        run: |
+          NOMAX_LIVE_PIN=$(grep ^REVIEW_CODE= _cert/nomax.env | cut -d= -f2-) \
+          NOMAX_LIVE_HOST=$(grep ^DOMAIN= _cert/nomax.env | cut -d= -f2-) \
+            dist/windows/core.test.exe -test.run TestLiveWindows -test.v -test.timeout 20m
+
+  # Built where NSIS is a package away, once the Windows machine has passed it; the join page offers it.
+  installer:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the build number is the commit count
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: sudo apt-get install -y --no-install-recommends nsis
+      - name: Secrets
+        env:
+          NOMAX_ENV: ${{ secrets.NOMAX_ENV }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$NOMAX_ENV" > _cert/nomax.env
+          grep -E '^(ADMIN_CODE|ADMIN_PATH|API_PATH|FILES_PATH|PRIVACY_PATH|REVIEW_CODE|REALITY_PRIVATE_KEY|WG_PRIVATE_KEY|DIST_P12_PASSWORD|ANDROID_KEYSTORE_PASSWORD|MAC_INSTALLER_P12_PASSWORD)=.' _cert/nomax.env | cut -d= -f2- | sed 's/^/::add-mask::/'
+          printf '%s\n' "$SSH_KEY" > _cert/ssh_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > _cert/known_hosts
+      - run: make windows WINDOWS_ARGS=-upload
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nomax-setup
+          path: dist/nomax-setup.exe
+          retention-days: 14

@@ -1,0 +1,49 @@
+name: server
+
+on:
+  push:
+    branches: [main]
+    paths: [cmd/server/**, cmd/ops/**, internal/**, infra/host/**, go.mod, go.sum, .github/workflows/server.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.SERVER_HOST != '' # set by `make gh-secrets`; a repo without a server only runs ci
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+      - name: Secrets
+        env:
+          NOMAX_ENV: ${{ secrets.NOMAX_ENV }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$NOMAX_ENV" > _cert/nomax.env
+          grep -E '^(ADMIN_CODE|ADMIN_PATH|API_PATH|FILES_PATH|PRIVACY_PATH|REVIEW_CODE|REALITY_PRIVATE_KEY|WG_PRIVATE_KEY|DIST_P12_PASSWORD|ANDROID_KEYSTORE_PASSWORD|MAC_INSTALLER_P12_PASSWORD)=.' _cert/nomax.env | cut -d= -f2- | sed 's/^/::add-mask::/'
+          printf '%s\n' "$SSH_KEY" > _cert/ssh_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > _cert/known_hosts
+      - run: go run ./cmd/ops deploy
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
+      - name: OpenVPN and strongSwan clients for the probe
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends openvpn charon-systemd strongswan-swanctl libcharon-extauth-plugins libcharon-extra-plugins libstrongswan-standard-plugins
+      - run: go run ./cmd/ops probe
+        env:
+          SERVER_HOST: ${{ vars.SERVER_HOST }}
